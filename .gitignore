@@ -1,0 +1,29 @@
+# Virtual environment
+venv/
+
+# Environment variables
+.env
+
+# API cache
+api_cache.json
+
+# Icons
+static/icons/*
+
+# Database
+*.db
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# IDE files
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db

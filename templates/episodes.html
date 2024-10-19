@@ -1,0 +1,61 @@
+{% for season, episodes in series_info.episodes.items() %}
+<button
+  class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mr-2 mb-2"
+  onclick="toggleSeason('{{ series_info.info.tmdb_id }}-{{ season }}')"
+>
+  Season {{ season }}
+</button>
+{% endfor %} {% for season, episodes in series_info.episodes.items() %}
+<div
+  id="season-{{ series_info.info.tmdb_id }}-{{ season }}"
+  class="season-content"
+  style="display: none"
+>
+  <h5 class="text-lg font-medium mb-2">Season {{ season }}</h5>
+  <ul>
+    {% for episode in episodes %}
+    <li class="mb-4">
+      Episode {{ episode.episode_num }}: {{ episode.title }}
+
+      <a
+        href="{{ episode.play_link }}"
+        class="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded text-sm ml-2"
+        target="_blank"
+      >
+        Download
+      </a>
+
+      {% if episode.container_extension in ['mp4'] %}
+      <a
+        href="/stream/episode/{{ series_id }}_{{ episode.id}}"
+        class="bg-blue-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded text-sm ml-2"
+        >Stream in Browser</a
+      >
+      {% endif %}
+      <span class="text-sm text-gray-600 ml-2"
+        >{{ episode.container_extension }}</span
+      >
+      <p>Duration: {{ episode.duration }}</p>
+      <p>Rating: {{ episode.rating }}</p>
+      <p>{{ episode.plot }}</p>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endfor %}
+
+<script>
+  function toggleSeason(seasonId) {
+    const seasonContent = document.getElementById("season-" + seasonId);
+    const allSeasons = document.querySelectorAll(".season-content");
+
+    allSeasons.forEach((season) => {
+      if (season.id !== "season-" + seasonId) {
+        season.style.display = "none";
+      }
+    });
+
+    seasonContent.style.display =
+      seasonContent.style.display === "none" ? "block" : "none";
+  }
+</script>

@@ -1,0 +1,96 @@
+{% extends "base.html" %} {% block title %}{{ series_info.info.name }} - Xtream
+Loader{% endblock %} {% block content %} {% if series_info.info.cached_backdrop
+%}
+<div class="relative h-64 mb-11">
+  <img
+    src="{{ series_info.info.cached_backdrop }}"
+    alt="{{ series_info.info.name }} backdrop"
+    class="w-full h-full object-cover"
+  />
+  <div class="absolute inset-0 bg-black bg-opacity-50"></div>
+</div>
+{% endif %}
+
+<div
+  class="container mx-auto px-4 py-8 {% if series_info.info.cached_backdrop %}-mt-32 relative z-10{% endif %}"
+>
+  <h1
+    class="text-3xl font-bold mb-6 {% if series_info.info.cached_backdrop %}text-white{% endif %}"
+  >
+    Series - {{ series_info.info.name }}
+  </h1>
+
+  <div
+    class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-8"
+    role="alert"
+  >
+    <p><strong>Data Fetched:</strong> {{ fetch_time }}</p>
+    <p><strong>Will Refresh In:</strong> {{ refresh_time }}</p>
+  </div>
+
+  <div class="mb-4">
+    <a
+      href="/series"
+      class="inline-block bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded mr-2"
+      >Back to Series</a
+    >
+    <a
+      href="/series/{{ series_info.info.series_id }}?force_refresh=true"
+      class="inline-block bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+      >Force Refresh</a
+    >
+  </div>
+
+  <div class="bg-white shadow-md rounded-lg p-6 mb-8">
+    <div class="flex items-center mb-4">
+      {% if series_info.info.cover %}
+      <img
+        src="{{ series_info.info.cover }}"
+        alt="{{ series_info.info.name }} cover"
+        class="w-32 h-48 object-cover rounded mr-6"
+      />
+      {% else %}
+      <div
+        class="w-32 h-48 bg-gray-200 rounded flex items-center justify-center mr-6"
+      >
+        <span class="text-gray-500">No cover</span>
+      </div>
+      {% endif %}
+      <div>
+        <p><strong>Year:</strong> {{ series_info.info.year }}</p>
+        <p><strong>Genre:</strong> {{ series_info.info.genre }}</p>
+        <p><strong>Rating:</strong> {{ series_info.info.rating }} / 10</p>
+        <p><strong>Status:</strong> {{ series_info.info.status }}</p>
+        <p>
+          <strong>Episode Run Time:</strong> {{
+          series_info.info.episode_run_time }}
+        </p>
+        <p><strong>Release Date:</strong> {{ series_info.info.releaseDate }}</p>
+        <p>
+          <strong>Last Modified:</strong> {{ series_info.info.last_modified }}
+        </p>
+      </div>
+    </div>
+
+    <p><strong>Plot:</strong> {{ series_info.info.plot }}</p>
+    <p><strong>Cast:</strong> {{ series_info.info.cast }}</p>
+    {% if series_info.info.director %}
+    <p><strong>Director:</strong> {{ series_info.info.director }}</p>
+    {% endif %} {% if series_info.info.youtube_trailer %}
+    <a
+      href="https://www.youtube.com/watch?v={{ series_info.info.youtube_trailer }}"
+      target="_blank"
+      class="inline-block bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded mt-4"
+    >
+      Watch Trailer on YouTube
+    </a>
+    {% endif %}
+  </div>
+
+  <div class="bg-white shadow-md rounded-lg p-6">
+    <h2 class="text-2xl font-semibold mb-4">Episodes</h2>
+    {% include "episodes.html" %}
+  </div>
+</div>
+
+{% endblock %}

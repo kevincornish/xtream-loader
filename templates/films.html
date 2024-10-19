@@ -1,0 +1,60 @@
+{% extends "base.html" %} {% block title %}Films - Xtream Loader{% endblock %}
+{% block content %}
+
+<h1 class="text-3xl font-bold mb-6">Films</h1>
+
+<div
+  class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-8"
+  role="alert"
+>
+  <p><strong>Data Fetched:</strong> {{ fetch_time }}</p>
+  <p><strong>Will Refresh In:</strong> {{ refresh_time }}</p>
+</div>
+
+<div class="mb-4">
+  <a
+    href="/films?force_refresh=true"
+    class="inline-block bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+  >
+    Force Refresh
+  </a>
+</div>
+
+<div id="film-categories" class="space-y-4 mt-4">
+  {% for category in film_categories %}
+  <div class="bg-white shadow-md rounded-lg p-4">
+    <h3 class="text-xl font-semibold mb-2">
+      {{ category.category_name }} (ID: {{ category.category_id }})
+    </h3>
+    <button
+      hx-get="/film-category/{{ category.category_id }}"
+      hx-target="#content-film-{{ category.category_id }}"
+      hx-indicator="#indicator-film-{{ category.category_id }}"
+      class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mr-2"
+    >
+      Load film Streams
+    </button>
+    <button
+      hx-get="/film-category/{{ category.category_id }}?force_refresh=true"
+      hx-target="#content-film-{{ category.category_id }}"
+      hx-indicator="#indicator-film-{{ category.category_id }}"
+      class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mr-2"
+    >
+      Force Refresh
+    </button>
+    <button
+      hx-get="/empty"
+      hx-target="#content-film-{{ category.category_id }}"
+      class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
+    >
+      Close
+    </button>
+    <div id="indicator-film-{{ category.category_id }}" class="htmx-indicator">
+      Loading...
+    </div>
+    <div id="content-film-{{ category.category_id }}" class="mt-4"></div>
+  </div>
+  {% endfor %}
+</div>
+
+{% endblock %}

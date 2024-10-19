@@ -1,0 +1,38 @@
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+  {% for stream in streams %}
+  <div class="bg-white shadow-md rounded-lg p-4">
+    <div class="flex items-center mb-2">
+      {% if stream.cached_icon %}
+      <a href="/film/{{ stream.stream_id }}">
+        <img
+          src="{{ stream.cached_icon }}"
+          alt="{{ stream.name }} icon"
+          class="w-24 h-36 mr-4 object-cover rounded"
+        />
+      </a>
+      {% else %}
+      <a href="/film/{{ stream.stream_id }}">
+        <div
+          class="w-24 h-36 mr-4 bg-gray-200 rounded flex items-center justify-center"
+        >
+          <span class="text-gray-500">No icon</span>
+        </div>
+      </a>
+      {% endif %}
+      <div>
+        <h3 class="text-lg font-semibold">
+          <a
+            href="/film/{{ stream.stream_id }}"
+            class="text-blue-600 hover:text-blue-800"
+            >{{ stream.name }}</a
+          >
+        </h3>
+      </div>
+    </div>
+
+    <p><strong>File Type:</strong> {{ stream.container_extension }}</p>
+    <p><strong>Added:</strong> {{ stream.added_date }}</p>
+    <p><strong>Rating:</strong> {{ stream.rating }}</p>
+  </div>
+  {% endfor %}
+</div>

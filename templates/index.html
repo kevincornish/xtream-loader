@@ -1,0 +1,55 @@
+{% extends "base.html" %} {% block title %}Home - Xtream Loader{% endblock %} {%
+block content %}
+<h1 class="text-3xl font-bold mb-6">Xtream Loader</h1>
+
+{% if error %}
+<div
+  class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-8"
+  role="alert"
+>
+  <p>{{ error }}</p>
+</div>
+{% endif %}
+
+<div
+  class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-8"
+  role="alert"
+>
+  <p><strong>Data Fetched:</strong> {{ fetch_time }}</p>
+  <p><strong>Will Refresh In:</strong> {{ refresh_time }}</p>
+</div>
+
+<div class="mb-4">
+  <a
+    href="/?force_refresh=true"
+    class="inline-block bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+    >Force Refresh</a
+  >
+</div>
+
+<div class="bg-white shadow-md rounded-lg p-6 mb-8">
+  <h2 class="text-2xl font-semibold mb-4">User Information</h2>
+  <p><strong>Username:</strong> {{ user_info.username }}</p>
+  <p><strong>Status:</strong> {{ user_info.status }}</p>
+  <p><strong>Expiration Date:</strong> {{ user_info.exp_date }}</p>
+  <p>
+    <strong>Is Trial:</strong> {{ "Yes" if user_info.is_trial == "1" else "No"
+    }}
+  </p>
+  <p><strong>Active Connections:</strong> {{ user_info.active_cons }}</p>
+  <p><strong>Max Connections:</strong> {{ user_info.max_connections }}</p>
+  <p><strong>Created At:</strong> {{ user_info.created_at }}</p>
+</div>
+
+<div class="bg-white shadow-md rounded-lg p-6 mb-8">
+  <h2 class="text-2xl font-semibold mb-4">Server Information</h2>
+  <p><strong>URL:</strong> {{ server_info.url }}</p>
+  <p><strong>Port:</strong> {{ server_info.port }}</p>
+  <p><strong>HTTPS Port:</strong> {{ server_info.https_port }}</p>
+  <p><strong>Server Protocol:</strong> {{ server_info.server_protocol }}</p>
+  <p><strong>RTMP Port:</strong> {{ server_info.rtmp_port }}</p>
+  <p><strong>Timezone:</strong> {{ server_info.timezone }}</p>
+  <p><strong>Server Time:</strong> {{ server_info.time_now }}</p>
+</div>
+
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends "base.html" %} {% block title %}EPG Information - Xtream Loader{%
+endblock %} {% block content %}
+<div class="container mx-auto px-4 py-8">
+  <h1 class="text-3xl font-bold mb-6">
+    EPG Information for Stream ID: {{ stream_id }}
+  </h1>
+
+  <a
+    href="javascript:history.back()"
+    class="inline-block bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-4"
+  >
+    Back to Streams
+  </a>
+
+  {% if epg_info.error %}
+  <div
+    class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4"
+    role="alert"
+  >
+    <p>Error fetching EPG information: {{ epg_info.error }}</p>
+  </div>
+  {% elif epg_info and epg_info.epg_listings %}
+  <div class="bg-white shadow-md rounded-lg p-6">
+    <h2 class="text-2xl font-semibold mb-4">Program Listings</h2>
+    <ul class="space-y-4">
+      {% for program in epg_info.epg_listings %}
+      <li class="border-b pb-4">
+        <h3 class="text-xl font-semibold">{{ program.title }}</h3>
+        <p class="text-gray-600">
+          {% if program.start is defined and program.end is defined %} {{
+          format_timestamp(program.start) }} - {{ format_timestamp(program.end)
+          }} {% else %} Time information not available {% endif %}
+        </p>
+        <p class="mt-2">{{ program.description }}</p>
+        <p class="text-sm text-gray-500 mt-2">
+          Channel ID: {{ program.channel_id }}
+        </p>
+        <p class="text-sm text-gray-500">
+          {% if program.now_playing == 1 %}
+          <span class="text-green-500 font-semibold">Now Playing</span>
+          {% endif %} {% if program.has_archive == 1 %}
+          <span class="text-blue-500 font-semibold ml-2"
+            >Archive Available</span
+          >
+          {% endif %}
+        </p>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% else %}
+  <div
+    class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4"
+    role="alert"
+  >
+    <p>No EPG information available for this stream.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

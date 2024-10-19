@@ -1,0 +1,17 @@
+{% extends "base.html" %} {% block title %}Stream - {{ title }}{% endblock %} {%
+block content %}
+<div class="container mx-auto px-4 py-8">
+  <h1 class="text-3xl font-bold mb-6">{{ title }}</h1>
+  <video width="100%" controls autoplay>
+    <source src="{{ play_link }}" type="video/mp4" />
+    Your browser does not support the video tag.
+  </video>
+  <div class="mt-4">
+    <a
+      href="javascript:history.back()"
+      class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
+      >Back</a
+    >
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,79 @@
+{% extends "base.html" %} {% block title %}Admin - Xtream Loader{% endblock %}
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+  <h1 class="text-3xl font-bold mb-6">Admin Panel</h1>
+
+  <h2 class="text-2xl font-bold mb-4">Add User</h2>
+  <form method="post" action="/admin/add_user" class="mb-8">
+    <div class="mb-4">
+      <label for="username" class="block text-gray-700 text-sm font-bold mb-2"
+        >Username:</label
+      >
+      <input
+        type="text"
+        id="username"
+        name="username"
+        required
+        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+      />
+    </div>
+    <div class="mb-4">
+      <label for="password" class="block text-gray-700 text-sm font-bold mb-2"
+        >Password:</label
+      >
+      <input
+        type="password"
+        id="password"
+        name="password"
+        required
+        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+      />
+    </div>
+    <div class="mb-4">
+      <label class="flex items-center">
+        <input type="checkbox" name="is_admin" class="form-checkbox" />
+        <span class="ml-2">Is Admin</span>
+      </label>
+    </div>
+    <button
+      type="submit"
+      class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+    >
+      Add User
+    </button>
+  </form>
+
+  <h2 class="text-2xl font-bold mb-4">User List</h2>
+  <table class="w-full mb-8">
+    <thead>
+      <tr>
+        <th class="px-4 py-2 text-left">Username</th>
+        <th class="px-4 py-2 text-left">Admin</th>
+        <th class="px-4 py-2 text-left">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for user in users %}
+      <tr>
+        <td class="border px-4 py-2">{{ user.username }}</td>
+        <td class="border px-4 py-2">{{ "Yes" if user.is_admin else "No" }}</td>
+        <td class="border px-4 py-2">
+          <form
+            method="post"
+            action="/admin/delete_user/{{ user.id }}"
+            class="inline"
+          >
+            <button
+              type="submit"
+              class="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline"
+            >
+              Delete
+            </button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

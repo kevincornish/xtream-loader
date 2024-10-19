@@ -1,0 +1,41 @@
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+  {% for show in series %}
+  <div class="bg-white shadow-md rounded-lg p-4">
+    <div class="flex items-center mb-2">
+      {% if show.cached_cover %}
+      <img
+        src="{{ show.cached_cover }}"
+        alt="{{ show.name }} cover"
+        class="w-24 h-36 mr-4 object-cover rounded"
+      />
+      {% else %}
+      <div
+        class="w-24 h-36 mr-4 bg-gray-200 rounded flex items-center justify-center"
+      >
+        <span class="text-gray-500">No cover</span>
+      </div>
+      {% endif %}
+      <div>
+        <h3 class="text-lg font-semibold">
+          <a
+            href="/series/{{ show.series_id }}"
+            class="text-blue-600 hover:text-blue-800"
+          >
+            {{ show.name }}
+          </a>
+        </h3>
+        <p class="text-sm text-gray-600">{{ show.year }}</p>
+      </div>
+    </div>
+    <p class="mb-2"><strong>Plot:</strong> {{ show.plot }}</p>
+    <p><strong>Cast:</strong> {{ show.cast }}</p>
+    <p><strong>Director:</strong> {{ show.director }}</p>
+    <p><strong>Genre:</strong> {{ show.genre }}</p>
+    <p><strong>Added:</strong> {{ show.added_date }}</p>
+    <p><strong>Rating:</strong> {{ show.rating }} / 10</p>
+    <p><strong>Episode Run Time:</strong> {{ show.episode_run_time }}</p>
+    <p><strong>Release Date:</strong> {{ show.release_date }}</p>
+    <p><strong>Last Modified:</strong> {{ show.last_modified }}</p>
+  </div>
+  {% endfor %}
+</div>

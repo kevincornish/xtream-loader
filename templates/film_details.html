@@ -1,0 +1,96 @@
+{% extends "base.html" %} {% block title %}{{ film_info.info.name }} - Xtream
+Loader{% endblock %} {% block content %} {% if film_info.info.cached_backdrop %}
+<div class="relative h-64 mb-11">
+  <img
+    src="{{ film_info.info.cached_backdrop }}"
+    alt="{{ film_info.info.name }} backdrop"
+    class="w-full h-full object-cover"
+  />
+  <div class="absolute inset-0 bg-black bg-opacity-50"></div>
+</div>
+{% endif %}
+
+<div
+  class="container mx-auto px-4 py-8 {% if film_info.info.cached_backdrop %}-mt-32 relative z-10{% endif %}"
+>
+  <h1
+    class="text-3xl font-bold mb-6 {% if film_info.info.cached_backdrop %}text-white{% endif %}"
+  >
+    Film - {{ film_info.info.name }}
+  </h1>
+
+  <div
+    class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-8"
+    role="alert"
+  >
+    <p><strong>Data Fetched:</strong> {{ fetch_time }}</p>
+    <p><strong>Will Refresh In:</strong> {{ refresh_time }}</p>
+  </div>
+
+  <div class="mb-4">
+    <a
+      href="/films"
+      class="inline-block bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded mr-2"
+      >Back to Films</a
+    >
+    <a
+      href="/film/{{ film_info.movie_data.stream_id }}?force_refresh=true"
+      class="inline-block bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+      >Force Refresh</a
+    >
+  </div>
+
+  <div class="bg-white shadow-md rounded-lg p-6 mb-8">
+    <div class="flex items-center mb-4">
+      {% if film_info.info.cover_big %}
+      <img
+        src="{{ film_info.info.cover_big }}"
+        alt="{{ film_info.info.name }} cover"
+        class="w-32 h-48 object-cover rounded mr-6"
+      />
+      {% else %}
+      <div
+        class="w-32 h-48 bg-gray-200 rounded flex items-center justify-center mr-6"
+      >
+        <span class="text-gray-500">No cover</span>
+      </div>
+      {% endif %}
+      <div>
+        <p><strong>Year:</strong> {{ film_info.info.releasedate[:4] }}</p>
+        <p><strong>Genre:</strong> {{ film_info.info.genre }}</p>
+        <p><strong>Rating:</strong> {{ film_info.info.rating }} / 10</p>
+        <p><strong>Duration:</strong> {{ film_info.info.duration }}</p>
+        <p><strong>Country:</strong> {{ film_info.info.country }}</p>
+        <p><strong>Added:</strong> {{ film_info.movie_data.added }}</p>
+      </div>
+    </div>
+
+    <p><strong>Plot:</strong> {{ film_info.info.plot }}</p>
+    <p><strong>Cast:</strong> {{ film_info.info.cast }}</p>
+    {% if film_info.info.director %}
+    <p><strong>Director:</strong> {{ film_info.info.director }}</p>
+    {% endif %} {% if film_info.info.youtube_trailer %}
+    <a
+      href="https://www.youtube.com/watch?v={{ film_info.info.youtube_trailer }}"
+      class="inline-block bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded mt-4"
+      target="_blank"
+      >Watch Trailer on YouTube</a
+    >
+    {% endif %}
+
+    <a
+      href="{{ film_info.play_link }}"
+      class="inline-block bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-4"
+      target="_blank"
+      >Download</a
+    >
+    {% if film_info.movie_data.container_extension in ['mp4'] %}
+    <a
+      href="/stream/film/{{ film_info.movie_data.stream_id }}"
+      class="inline-block bg-blue-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-4"
+      >Stream in Browser</a
+    >
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

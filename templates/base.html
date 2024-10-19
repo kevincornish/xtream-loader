@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}Xtream Loader{% endblock %}</title>
+    <script src="https://unpkg.com/htmx.org@1.9.3"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      .backdrop-container {
+        position: relative;
+        overflow: hidden;
+      }
+      .backdrop-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .backdrop-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+      }
+    </style>
+  </head>
+  <body class="bg-gray-100">
+    <nav class="bg-gray-800 text-white p-4">
+      <div class="container mx-auto flex justify-between items-center">
+        <a href="/" class="text-xl font-bold">Xtream Loader</a>
+        <div class="space-x-4">
+          {% if current_user %}
+          <a href="/" class="hover:text-gray-300">Home</a>
+          <a href="/streams" class="hover:text-gray-300">Streams</a>
+          <a href="/series" class="hover:text-gray-300">Series</a>
+          <a href="/films" class="hover:text-gray-300">Films</a>
+          {% if current_user.is_admin %}
+          <a href="/admin" class="hover:text-gray-300">Admin</a>
+          {% endif %}
+          <a href="/logout" class="hover:text-gray-300">Logout</a>
+          {% else %}
+          <a href="/login" class="hover:text-gray-300">Login</a>
+          {% endif %}
+        </div>
+      </div>
+    </nav>
+    <div class="container mx-auto px-4 py-8">
+      {% block content %}{% endblock %}
+    </div>
+  </body>
+</html>
