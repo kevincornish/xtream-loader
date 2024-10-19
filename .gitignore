@@ -4,9 +4,6 @@ venv/
 # Environment variables
 .env
 
-# API cache
-api_cache.json
-
 # Icons
 static/icons/*
 
