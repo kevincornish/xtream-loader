@@ -13,17 +13,10 @@
 
 <div class="mb-4">
   <a
-    href="/films?force_refresh=true"
-    class="inline-block bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-  >
-    Force Refresh
-  </a>
-  <a
     href="/films/refresh-all"
-    class="inline-block bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded ml-2"
+    class="inline-block bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+    >Refresh All Films</a
   >
-    Force Refresh All Films
-  </a>
 </div>
 
 {% if all_films_refreshed %}
@@ -55,15 +48,7 @@
       hx-indicator="#indicator-film-{{ category.category_id }}"
       class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mr-2"
     >
-      Load film Streams
-    </button>
-    <button
-      hx-get="/film-category/{{ category.category_id }}?force_refresh=true"
-      hx-target="#content-film-{{ category.category_id }}"
-      hx-indicator="#indicator-film-{{ category.category_id }}"
-      class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mr-2"
-    >
-      Force Refresh
+      Open
     </button>
     <button
       hx-get="/empty"

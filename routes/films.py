@@ -24,7 +24,6 @@ templates = Jinja2Templates(directory="templates")
 async def film_page(
     request: Request,
     current_user: User = Depends(get_current_user),
-    force_refresh: bool = Query(False),
     db: Session = Depends(get_db),
     connection_info: ConnectionInfo = Depends(
         lambda: ConnectionInfo(
@@ -36,10 +35,7 @@ async def film_page(
 ):
     if not current_user:
         return RedirectResponse(url="/login")
-    film_categories, fetch_time, expiry_time = client.get_film_categories(
-        connection_info, force_refresh, db
-    )
-    refresh_time = calculate_refresh_time(expiry_time)
+    film_categories, fetch_time, _ = client.get_film_categories(connection_info, db=db)
 
     return templates.TemplateResponse(
         "films.html",
@@ -47,7 +43,6 @@ async def film_page(
             "request": request,
             "film_categories": film_categories,
             "fetch_time": fetch_time.strftime("%Y-%m-%d %H:%M:%S"),
-            "refresh_time": refresh_time,
             "current_user": current_user,
         },
     )
@@ -71,17 +66,15 @@ async def refresh_all_films(
         return RedirectResponse(url="/login")
 
     try:
-        all_films, fetch_time, expiry_time = client.get_all_films(
+        # First, refresh categories
+        film_categories, _, _ = client.get_film_categories(connection_info, db=db)
+
+        # Then, refresh all films
+        all_films, fetch_time, _ = client.get_all_films(
             connection_info, force_refresh=True, db=db
         )
-        refresh_time = calculate_refresh_time(expiry_time)
 
-        # pass the films data type
         background_tasks.add_task(cache_icons_background, all_films, "films")
-
-        film_categories, _, _ = client.get_film_categories(
-            connection_info, force_refresh=False, db=db
-        )
 
         db.commit()
 
@@ -91,7 +84,6 @@ async def refresh_all_films(
                 "request": request,
                 "film_categories": film_categories,
                 "fetch_time": fetch_time.strftime("%Y-%m-%d %H:%M:%S"),
-                "refresh_time": refresh_time,
                 "current_user": current_user,
                 "all_films_refreshed": True,
             },
@@ -105,7 +97,6 @@ async def refresh_all_films(
                 "request": request,
                 "film_categories": [],
                 "fetch_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "refresh_time": "N/A",
                 "current_user": current_user,
                 "all_films_refreshed": False,
                 "error_message": "An error occurred while refreshing film data.",

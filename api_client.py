@@ -416,13 +416,12 @@ class CachedApiClient:
     def get_series_category(
         self,
         connection_info: ConnectionInfo,
-        force_refresh: bool = False,
         db: Session = None,
     ) -> Tuple[List[Dict[str, Any]], datetime, datetime]:
-        return self._get_series_categories_from_db(connection_info, force_refresh, db)
+        return self._get_series_categories_from_db(connection_info, db)
 
     def _get_series_categories_from_db(
-        self, connection_info: ConnectionInfo, force_refresh: bool, db: Session
+        self, connection_info: ConnectionInfo, db: Session
     ) -> Tuple[List[Dict[str, Any]], datetime, datetime]:
         refresh_data = (
             db.query(RefreshData)
@@ -430,37 +429,13 @@ class CachedApiClient:
             .first()
         )
 
-        if (
-            force_refresh
-            or not refresh_data
-            or datetime.utcnow() - refresh_data.last_refresh > timedelta(hours=24)
-        ):
-            # Fetch data from API
-            url = f"{connection_info.base_url}/player_api.php?username={connection_info.username}&password={connection_info.password}&action=get_series_categories"
-            response = requests.get(url)
-            response.raise_for_status()
-            data = response.json()
-
-            # Clear existing series categories
-            db.query(SeriesCategory).delete()
-
-            # Add new series categories
-            for category in data:
-                new_category = SeriesCategory(
-                    category_id=category["category_id"],
-                    category_name=category["category_name"],
-                    parent_id=category["parent_id"],
-                )
-                db.add(new_category)
-
-            # Update or create RefreshData
-            if not refresh_data:
-                refresh_data = RefreshData(data_type="series_categories")
-            refresh_data.last_refresh = datetime.utcnow()
+        if not refresh_data:
+            # If no refresh data, create it with a past date to force a refresh
+            refresh_data = RefreshData(
+                data_type="series_categories", last_refresh=datetime.min
+            )
             db.add(refresh_data)
-
             db.commit()
-            db.refresh(refresh_data)
 
         # Fetch series categories from database
         series_categories = db.query(SeriesCategory).all()
@@ -886,13 +861,12 @@ class CachedApiClient:
     def get_film_categories(
         self,
         connection_info: ConnectionInfo,
-        force_refresh: bool = False,
         db: Session = None,
     ) -> Tuple[List[Dict[str, Any]], datetime, datetime]:
-        return self._get_film_categories_from_db(connection_info, force_refresh, db)
+        return self._get_film_categories_from_db(connection_info, db)
 
     def _get_film_categories_from_db(
-        self, connection_info: ConnectionInfo, force_refresh: bool, db: Session
+        self, connection_info: ConnectionInfo, db: Session
     ) -> Tuple[List[Dict[str, Any]], datetime, datetime]:
         refresh_data = (
             db.query(RefreshData)
@@ -900,37 +874,13 @@ class CachedApiClient:
             .first()
         )
 
-        if (
-            force_refresh
-            or not refresh_data
-            or datetime.utcnow() - refresh_data.last_refresh > timedelta(hours=24)
-        ):
-            # Fetch data from API
-            url = f"{connection_info.base_url}/player_api.php?username={connection_info.username}&password={connection_info.password}&action=get_vod_categories"
-            response = requests.get(url)
-            response.raise_for_status()
-            data = response.json()
-
-            # Clear existing film categories
-            db.query(FilmCategory).delete()
-
-            # Add new film categories
-            for category in data:
-                new_category = FilmCategory(
-                    category_id=category["category_id"],
-                    category_name=category["category_name"],
-                    parent_id=category["parent_id"],
-                )
-                db.add(new_category)
-
-            # Update or create RefreshData
-            if not refresh_data:
-                refresh_data = RefreshData(data_type="film_categories")
-            refresh_data.last_refresh = datetime.utcnow()
+        if not refresh_data:
+            # If no refresh data, create it with a past date to force a refresh
+            refresh_data = RefreshData(
+                data_type="film_categories", last_refresh=datetime.min
+            )
             db.add(refresh_data)
-
             db.commit()
-            db.refresh(refresh_data)
 
         # Fetch film categories from database
         film_categories = db.query(FilmCategory).all()

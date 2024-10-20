@@ -23,7 +23,6 @@ templates = Jinja2Templates(directory="templates")
 async def series_page(
     request: Request,
     current_user: User = Depends(get_current_user),
-    force_refresh: bool = Query(False),
     db: Session = Depends(get_db),
     connection_info: ConnectionInfo = Depends(
         lambda: ConnectionInfo(
@@ -35,10 +34,9 @@ async def series_page(
 ):
     if not current_user:
         return RedirectResponse(url="/login")
-    series_categories, fetch_time, expiry_time = client.get_series_category(
-        connection_info, force_refresh, db
+    series_categories, fetch_time, _ = client.get_series_category(
+        connection_info, db=db
     )
-    refresh_time = calculate_refresh_time(expiry_time)
 
     return templates.TemplateResponse(
         "series.html",
@@ -46,9 +44,7 @@ async def series_page(
             "request": request,
             "series_categories": series_categories,
             "fetch_time": fetch_time.strftime("%Y-%m-%d %H:%M:%S"),
-            "refresh_time": refresh_time,
             "current_user": current_user,
-            "all_series_refreshed": False,
         },
     )
 
@@ -71,18 +67,17 @@ async def refresh_all_series(
         return RedirectResponse(url="/login")
 
     try:
-        all_series, fetch_time, expiry_time = client.get_all_series(
+        # First, refresh categories
+        series_categories, _, _ = client.get_series_category(connection_info, db=db)
+
+        # Then, refresh all series
+        all_series, fetch_time, _ = client.get_all_series(
             connection_info, force_refresh=True, db=db
         )
-        refresh_time = calculate_refresh_time(expiry_time)
 
         background_tasks.add_task(cache_icons_background, all_series)
 
-        series_categories, _, _ = client.get_series_category(
-            connection_info, force_refresh=False, db=db
-        )
-
-        db.commit()  # Commit the transaction here
+        db.commit()
 
         return templates.TemplateResponse(
             "series.html",
@@ -90,13 +85,12 @@ async def refresh_all_series(
                 "request": request,
                 "series_categories": series_categories,
                 "fetch_time": fetch_time.strftime("%Y-%m-%d %H:%M:%S"),
-                "refresh_time": refresh_time,
                 "current_user": current_user,
                 "all_series_refreshed": True,
             },
         )
     except Exception as e:
-        db.rollback()  # Rollback the transaction in case of any exception
+        db.rollback()
         logger.error(f"Error refreshing all series: {str(e)}")
         return templates.TemplateResponse(
             "series.html",
@@ -104,7 +98,6 @@ async def refresh_all_series(
                 "request": request,
                 "series_categories": [],
                 "fetch_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "refresh_time": "N/A",
                 "current_user": current_user,
                 "all_series_refreshed": False,
                 "error_message": "An error occurred while refreshing series data.",

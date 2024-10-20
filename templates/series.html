@@ -11,17 +11,10 @@
 
 <div class="mb-4">
   <a
-    href="/series?force_refresh=true"
-    class="inline-block bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mr-2"
-  >
-    Force Refresh Categories
-  </a>
-  <a
     href="/series/refresh-all"
     class="inline-block bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+    >Refresh All Series</a
   >
-    Force Refresh All Series
-  </a>
 </div>
 
 {% if all_series_refreshed %}
@@ -46,15 +39,7 @@
       hx-indicator="#indicator-series-{{ category.category_id }}"
       class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
     >
-      Load Series
-    </button>
-    <button
-      hx-get="/series-category/{{ category.category_id }}?force_refresh=true"
-      hx-target="#content-series-{{ category.category_id }}"
-      hx-indicator="#indicator-series-{{ category.category_id }}"
-      class="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded"
-    >
-      Force Refresh
+      Open
     </button>
     <button
       hx-get="/empty"
