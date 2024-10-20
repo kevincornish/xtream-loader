@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from database import User, get_db
 from api_client import client, ConnectionInfo
 from utils import calculate_refresh_time, cache_backdrop
-from auth import get_current_user
+from auth import user_has_films_access
 from urllib.parse import quote
 from config import API_BASE_URL, API_PASSWORD, API_USERNAME
 from utils import cache_icons_background
@@ -23,7 +23,7 @@ templates = Jinja2Templates(directory="templates")
 @router.get("/films", response_class=HTMLResponse)
 async def film_page(
     request: Request,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(user_has_films_access),
     force_refresh: bool = Query(False),
     db: Session = Depends(get_db),
     connection_info: ConnectionInfo = Depends(
@@ -57,7 +57,7 @@ async def film_page(
 async def refresh_all_films(
     request: Request,
     background_tasks: BackgroundTasks,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(user_has_films_access),
     db: Session = Depends(get_db),
     connection_info: ConnectionInfo = Depends(
         lambda: ConnectionInfo(
@@ -116,7 +116,7 @@ async def refresh_all_films(
 async def get_film_category_streams(
     category_id: int,
     request: Request,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(user_has_films_access),
     force_refresh: bool = False,
     db: Session = Depends(get_db),
     connection_info: ConnectionInfo = Depends(
@@ -142,7 +142,7 @@ async def get_film_category_streams(
 async def get_film_details(
     vod_id: int,
     request: Request,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(user_has_films_access),
     force_refresh: bool = Query(False),
     db: Session = Depends(get_db),
     connection_info: ConnectionInfo = Depends(

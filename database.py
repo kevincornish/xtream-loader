@@ -34,6 +34,9 @@ class User(Base):
     hashed_password = Column(String)
     is_active = Column(Boolean, default=True)
     is_admin = Column(Boolean, default=False)
+    streams_access = Column(Boolean, default=False)
+    series_access = Column(Boolean, default=False)
+    films_access = Column(Boolean, default=False)
 
 
 class RefreshData(Base):

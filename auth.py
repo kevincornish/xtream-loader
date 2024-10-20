@@ -67,3 +67,21 @@ async def get_current_user(
     if user is None:
         return None
     return user
+
+
+def user_has_streams_access(current_user: User = Depends(get_current_user)):
+    if not current_user or not current_user.streams_access:
+        raise HTTPException(status_code=403, detail="Access denied")
+    return current_user
+
+
+def user_has_series_access(current_user: User = Depends(get_current_user)):
+    if not current_user or not current_user.series_access:
+        raise HTTPException(status_code=403, detail="Access denied")
+    return current_user
+
+
+def user_has_films_access(current_user: User = Depends(get_current_user)):
+    if not current_user or not current_user.films_access:
+        raise HTTPException(status_code=403, detail="Access denied")
+    return current_user

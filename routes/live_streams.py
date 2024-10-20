@@ -1,13 +1,18 @@
 from datetime import datetime
-from fastapi import APIRouter, Depends, Query, Request, BackgroundTasks
+import logging
+from fastapi import APIRouter, Depends, Request, BackgroundTasks
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from database import User, get_db
 from api_client import client, ConnectionInfo
 from utils import calculate_refresh_time, cache_icons_background
-from auth import get_current_user
+from auth import user_has_streams_access
 from config import API_BASE_URL, API_PASSWORD, API_USERNAME
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -16,7 +21,7 @@ templates = Jinja2Templates(directory="templates")
 @router.get("/streams", response_class=HTMLResponse)
 async def streams_page(
     request: Request,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(user_has_streams_access),
     db: Session = Depends(get_db),
     connection_info: ConnectionInfo = Depends(
         lambda: ConnectionInfo(
@@ -51,7 +56,7 @@ async def streams_page(
 async def refresh_all_streams(
     request: Request,
     background_tasks: BackgroundTasks,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(user_has_streams_access),
     db: Session = Depends(get_db),
     connection_info: ConnectionInfo = Depends(
         lambda: ConnectionInfo(

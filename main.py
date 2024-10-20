@@ -226,9 +226,13 @@ async def admin_page(
 
 @app.post("/admin/add_user")
 async def add_user(
+    request: Request,
     username: str = Form(...),
     password: str = Form(...),
     is_admin: bool = Form(False),
+    streams_access: bool = Form(True),
+    series_access: bool = Form(True),
+    films_access: bool = Form(True),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -236,14 +240,35 @@ async def add_user(
         return RedirectResponse(url="/login")
     if not current_user.is_admin:
         return RedirectResponse(url="/?error=authfail")
+
     db_user = User(
         username=username,
         hashed_password=get_password_hash(password),
         is_admin=is_admin,
+        streams_access=streams_access,
+        series_access=series_access,
+        films_access=films_access,
     )
     db.add(db_user)
     db.commit()
     return RedirectResponse(url="/admin", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@app.put("/admin/update_permission/{user_id}")
+async def update_permission(
+    user_id: int,
+    permission: str = Form(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if not current_user or not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    setattr(user, permission, not getattr(user, permission))
+    db.commit()
+    return {"success": True}
 
 
 @app.post("/admin/delete_user/{user_id}")

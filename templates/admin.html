@@ -3,77 +3,192 @@
 <div class="container mx-auto px-4 py-8">
   <h1 class="text-3xl font-bold mb-6">Admin Panel</h1>
 
-  <h2 class="text-2xl font-bold mb-4">Add User</h2>
-  <form method="post" action="/admin/add_user" class="mb-8">
-    <div class="mb-4">
-      <label for="username" class="block text-gray-700 text-sm font-bold mb-2"
-        >Username:</label
-      >
-      <input
-        type="text"
-        id="username"
-        name="username"
-        required
-        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-      />
-    </div>
-    <div class="mb-4">
-      <label for="password" class="block text-gray-700 text-sm font-bold mb-2"
-        >Password:</label
-      >
-      <input
-        type="password"
-        id="password"
-        name="password"
-        required
-        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-      />
-    </div>
-    <div class="mb-4">
-      <label class="flex items-center">
-        <input type="checkbox" name="is_admin" class="form-checkbox" />
-        <span class="ml-2">Is Admin</span>
-      </label>
-    </div>
-    <button
-      type="submit"
-      class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-    >
-      Add User
-    </button>
-  </form>
+  <div class="bg-white shadow-md rounded-lg p-6 mb-8">
+    <h2 class="text-2xl font-bold mb-4">Add User</h2>
+    <form action="/admin/add_user" method="post" class="space-y-4">
+      <div>
+        <label for="username" class="block text-sm font-medium text-gray-700"
+          >Username:</label
+        >
+        <input
+          type="text"
+          id="username"
+          name="username"
+          required
+          class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+        />
+      </div>
+      <div>
+        <label for="password" class="block text-sm font-medium text-gray-700"
+          >Password:</label
+        >
+        <input
+          type="password"
+          id="password"
+          name="password"
+          required
+          class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+        />
+      </div>
+      <div class="flex items-center space-x-2">
+        <input
+          type="checkbox"
+          id="is_admin"
+          name="is_admin"
+          class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-offset-0 focus:ring-indigo-200 focus:ring-opacity-50"
+        />
+        <label for="is_admin" class="text-sm font-medium text-gray-700"
+          >Is Admin</label
+        >
+      </div>
+      <div class="flex items-center space-x-2">
+        <input
+          type="checkbox"
+          id="streams_access"
+          name="streams_access"
+          checked
+          class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-offset-0 focus:ring-indigo-200 focus:ring-opacity-50"
+        />
+        <label for="streams_access" class="text-sm font-medium text-gray-700"
+          >Streams Access</label
+        >
+      </div>
+      <div class="flex items-center space-x-2">
+        <input
+          type="checkbox"
+          id="series_access"
+          name="series_access"
+          checked
+          class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-offset-0 focus:ring-indigo-200 focus:ring-opacity-50"
+        />
+        <label for="series_access" class="text-sm font-medium text-gray-700"
+          >Series Access</label
+        >
+      </div>
+      <div class="flex items-center space-x-2">
+        <input
+          type="checkbox"
+          id="films_access"
+          name="films_access"
+          checked
+          class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-offset-0 focus:ring-indigo-200 focus:ring-opacity-50"
+        />
+        <label for="films_access" class="text-sm font-medium text-gray-700"
+          >Films Access</label
+        >
+      </div>
+      <div>
+        <button
+          type="submit"
+          class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+        >
+          Add User
+        </button>
+      </div>
+    </form>
+  </div>
 
-  <h2 class="text-2xl font-bold mb-4">User List</h2>
-  <table class="w-full mb-8">
-    <thead>
-      <tr>
-        <th class="px-4 py-2 text-left">Username</th>
-        <th class="px-4 py-2 text-left">Admin</th>
-        <th class="px-4 py-2 text-left">Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for user in users %}
-      <tr>
-        <td class="border px-4 py-2">{{ user.username }}</td>
-        <td class="border px-4 py-2">{{ "Yes" if user.is_admin else "No" }}</td>
-        <td class="border px-4 py-2">
-          <form
-            method="post"
-            action="/admin/delete_user/{{ user.id }}"
-            class="inline"
-          >
-            <button
-              type="submit"
-              class="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline"
-            >
-              Delete
-            </button>
-          </form>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="mt-8">
+    <h2 class="text-2xl font-bold mb-4">User List</h2>
+    <div class="overflow-x-auto">
+      <table class="min-w-full bg-white border border-gray-300">
+        <thead>
+          <tr class="bg-gray-100">
+            <th class="py-2 px-4 border-b text-left">Username</th>
+            <th class="py-2 px-4 border-b text-center">Admin</th>
+            <th class="py-2 px-4 border-b text-center">Streams Access</th>
+            <th class="py-2 px-4 border-b text-center">Series Access</th>
+            <th class="py-2 px-4 border-b text-center">Films Access</th>
+            <th class="py-2 px-4 border-b text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for user in users %}
+          <tr class="hover:bg-gray-50">
+            <td class="py-2 px-4 border-b">{{ user.username }}</td>
+            <td class="py-2 px-4 border-b text-center">
+              <input
+                type="checkbox"
+                class="form-checkbox h-5 w-5 text-blue-600"
+                name="is_admin"
+                {%
+                if
+                user.is_admin
+                %}checked{%
+                endif
+                %}
+                hx-put="/admin/update_permission/{{ user.id }}"
+                hx-trigger="click"
+                hx-swap="none"
+                hx-vals='{"permission": "is_admin"}'
+              />
+            </td>
+            <td class="py-2 px-4 border-b text-center">
+              <input
+                type="checkbox"
+                class="form-checkbox h-5 w-5 text-blue-600"
+                name="streams_access"
+                {%
+                if
+                user.streams_access
+                %}checked{%
+                endif
+                %}
+                hx-put="/admin/update_permission/{{ user.id }}"
+                hx-trigger="click"
+                hx-swap="none"
+                hx-vals='{"permission": "streams_access"}'
+              />
+            </td>
+            <td class="py-2 px-4 border-b text-center">
+              <input
+                type="checkbox"
+                class="form-checkbox h-5 w-5 text-blue-600"
+                name="series_access"
+                {%
+                if
+                user.series_access
+                %}checked{%
+                endif
+                %}
+                hx-put="/admin/update_permission/{{ user.id }}"
+                hx-trigger="click"
+                hx-swap="none"
+                hx-vals='{"permission": "series_access"}'
+              />
+            </td>
+            <td class="py-2 px-4 border-b text-center">
+              <input
+                type="checkbox"
+                class="form-checkbox h-5 w-5 text-blue-600"
+                name="films_access"
+                {%
+                if
+                user.films_access
+                %}checked{%
+                endif
+                %}
+                hx-put="/admin/update_permission/{{ user.id }}"
+                hx-trigger="click"
+                hx-swap="none"
+                hx-vals='{"permission": "films_access"}'
+              />
+            </td>
+            <td class="py-2 px-4 border-b text-center">
+              <form action="/admin/delete_user/{{ user.id }}" method="post">
+                <button
+                  type="submit"
+                  class="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded"
+                >
+                  Delete
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
 </div>
 {% endblock %}

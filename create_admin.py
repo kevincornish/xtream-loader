@@ -5,7 +5,14 @@ from main import get_password_hash
 def create_admin_user(username, password):
     db = SessionLocal()
     hashed_password = get_password_hash(password)
-    admin_user = User(username=username, hashed_password=hashed_password, is_admin=True)
+    admin_user = User(
+        username=username,
+        hashed_password=hashed_password,
+        is_admin=True,
+        streams_access=True,
+        series_access=True,
+        films_access=True,
+    )
     db.add(admin_user)
     db.commit()
     db.close()

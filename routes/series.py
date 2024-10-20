@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from database import User, get_db
 from api_client import client, ConnectionInfo
 from utils import calculate_refresh_time, cache_backdrop, cache_icons_background
-from auth import get_current_user
+from auth import user_has_series_access
 from urllib.parse import quote
 from config import API_BASE_URL, API_PASSWORD, API_USERNAME
 
@@ -22,7 +22,7 @@ templates = Jinja2Templates(directory="templates")
 @router.get("/series", response_class=HTMLResponse)
 async def series_page(
     request: Request,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(user_has_series_access),
     force_refresh: bool = Query(False),
     db: Session = Depends(get_db),
     connection_info: ConnectionInfo = Depends(
@@ -56,7 +56,7 @@ async def series_page(
 async def refresh_all_series(
     request: Request,
     background_tasks: BackgroundTasks,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(user_has_series_access),
     db: Session = Depends(get_db),
     connection_info: ConnectionInfo = Depends(
         lambda: ConnectionInfo(
@@ -113,7 +113,7 @@ async def refresh_all_series(
 async def get_series_episodes(
     series_id: int,
     request: Request,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(user_has_series_access),
     force_refresh: bool = Query(False),
     db: Session = Depends(get_db),
     connection_info: ConnectionInfo = Depends(
@@ -159,7 +159,7 @@ async def get_series_episodes(
 async def get_series_category_shows(
     category_id: int,
     request: Request,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(user_has_series_access),
     force_refresh: bool = False,
     db: Session = Depends(get_db),
     connection_info: ConnectionInfo = Depends(
