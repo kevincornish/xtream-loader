@@ -67,7 +67,7 @@ def cache_icon(icon_url: str, counter: DownloadCounter = None) -> str:
             response.raise_for_status()
             with open(filepath, "wb") as f:
                 f.write(response.content)
-            sleep_time = randint(3, 100)
+            sleep_time = randint(3, 5)
             logger.info(
                 f"Downloaded icon: {icon_url}, sleeping for {sleep_time} seconds"
             )
