@@ -24,30 +24,98 @@
         bottom: 0;
         background-color: rgba(0, 0, 0, 0.5);
       }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      .fade-in {
+        animation: fadeIn 0.3s ease-in-out;
+      }
     </style>
   </head>
   <body class="bg-gray-100">
     <nav class="bg-gray-800 text-white p-4">
-      <div class="container mx-auto flex justify-between items-center">
+      <div
+        class="container mx-auto flex flex-wrap justify-between items-center"
+      >
         <a href="/" class="text-xl font-bold">Xtream Loader</a>
-        <nav class="space-x-4">
-          {% if current_user %}
-          <a href="/" class="hover:text-gray-300">Home</a>
-          {% if current_user.streams_access %}
-          <a href="/streams" class="hover:text-gray-300">Streams</a>
-          {% endif %} {% if current_user.series_access %}
-          <a href="/series" class="hover:text-gray-300">Series</a>
-          {% endif %} {% if current_user.films_access %}
-          <a href="/films" class="hover:text-gray-300">Films</a>
-          {% endif %} {% if current_user.is_admin %}
-          <a href="/admin" class="hover:text-gray-300">Admin</a>
-          {% endif %}
-          <a href="/statistics" class="hover:text-gray-300">Statistics</a>
-          <a href="/logout" class="hover:text-gray-300">Logout</a>
-          {% else %}
-          <a href="/login" class="hover:text-gray-300">Login</a>
-          {% endif %}
-        </nav>
+
+        <button id="mobile-menu-button" class="lg:hidden">
+          <svg
+            class="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4 6h16M4 12h16m-7 6h7"
+            ></path>
+          </svg>
+        </button>
+
+        <div
+          id="mobile-menu"
+          class="hidden w-full lg:flex lg:w-auto lg:items-center"
+        >
+          <div class="lg:flex-grow">
+            {% if current_user %}
+            <a
+              href="/"
+              class="block mt-4 lg:inline-block lg:mt-0 hover:text-gray-300 mr-4"
+              >Home</a
+            >
+            {% if current_user.streams_access %}
+            <a
+              href="/streams"
+              class="block mt-4 lg:inline-block lg:mt-0 hover:text-gray-300 mr-4"
+              >Streams</a
+            >
+            {% endif %} {% if current_user.series_access %}
+            <a
+              href="/series"
+              class="block mt-4 lg:inline-block lg:mt-0 hover:text-gray-300 mr-4"
+              >Series</a
+            >
+            {% endif %} {% if current_user.films_access %}
+            <a
+              href="/films"
+              class="block mt-4 lg:inline-block lg:mt-0 hover:text-gray-300 mr-4"
+              >Films</a
+            >
+            {% endif %} {% if current_user.is_admin %}
+            <a
+              href="/admin"
+              class="block mt-4 lg:inline-block lg:mt-0 hover:text-gray-300 mr-4"
+              >Admin</a
+            >
+            {% endif %}
+            <a
+              href="/statistics"
+              class="block mt-4 lg:inline-block lg:mt-0 hover:text-gray-300 mr-4"
+              >Statistics</a
+            >
+            <a
+              href="/logout"
+              class="block mt-4 lg:inline-block lg:mt-0 hover:text-gray-300"
+              >Logout</a
+            >
+            {% else %}
+            <a
+              href="/login"
+              class="block mt-4 lg:inline-block lg:mt-0 hover:text-gray-300"
+              >Login</a
+            >
+            {% endif %}
+          </div>
+        </div>
       </div>
     </nav>
 
@@ -83,5 +151,15 @@
     <div class="container mx-auto px-4 py-8">
       {% block content %}{% endblock %}
     </div>
+
+    <script>
+      document
+        .getElementById("mobile-menu-button")
+        .addEventListener("click", function () {
+          var menu = document.getElementById("mobile-menu");
+          menu.classList.toggle("hidden");
+          menu.classList.toggle("fade-in");
+        });
+    </script>
   </body>
 </html>
