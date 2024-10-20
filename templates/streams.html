@@ -1,5 +1,6 @@
 {% extends "base.html" %} {% block title %}Live Streams - Xtream Loader{%
 endblock %} {% block content %}
+
 <h1 class="text-3xl font-bold mb-6">Live Streams</h1>
 
 <div
@@ -12,11 +13,22 @@ endblock %} {% block content %}
 
 <div class="mb-4">
   <a
-    href="/streams?force_refresh=true"
-    class="inline-block bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-    >Force Refresh</a
+    href="/streams/refresh-all"
+    class="inline-block bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
   >
+    Refresh All Live Streams
+  </a>
 </div>
+
+{% if all_streams_refreshed %}
+<div
+  class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-8"
+  role="alert"
+>
+  All stream data has been refreshed. Icon caching is in progress and may take
+  some time to complete.
+</div>
+{% endif %}
 
 <div id="live-categories" class="space-y-4 mt-4">
   {% for category in live_categories %}
@@ -25,33 +37,82 @@ endblock %} {% block content %}
       {{ category.category_name }} (ID: {{ category.category_id }})
     </h3>
     <button
-      hx-get="/live-category/{{ category.category_id }}"
-      hx-target="#content-{{ category.category_id }}"
-      hx-indicator="#indicator-{{ category.category_id }}"
-      class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+      onclick="toggleCategory('{{ category.category_id }}')"
+      class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mr-2"
     >
-      Load Streams
+      Open
     </button>
     <button
-      hx-get="/live-category/{{ category.category_id }}?force_refresh=true"
-      hx-target="#content-{{ category.category_id }}"
-      hx-indicator="#indicator-{{ category.category_id }}"
-      class="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded"
-    >
-      Force Refresh
-    </button>
-    <button
-      hx-get="/empty"
-      hx-target="#content-{{ category.category_id }}"
-      class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+      onclick="closeCategory('{{ category.category_id }}')"
+      class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
     >
       Close
     </button>
-    <div id="indicator-{{ category.category_id }}" class="htmx-indicator">
-      Loading...
-    </div>
     <div id="content-{{ category.category_id }}" class="mt-4"></div>
   </div>
   {% endfor %}
 </div>
+
+<script>
+  const allStreams = {{ all_streams|tojson }};
+
+  function toggleCategory(categoryId) {
+      const contentDiv = document.getElementById(`content-${categoryId}`);
+      if (contentDiv.innerHTML.trim() === '') {
+          const categoryStreams = allStreams.filter(stream => stream.category_id === categoryId);
+          const streamList = generateStreamList(categoryStreams);
+          contentDiv.innerHTML = streamList;
+      } else {
+          contentDiv.innerHTML = '';
+      }
+  }
+
+  function closeCategory(categoryId) {
+      const contentDiv = document.getElementById(`content-${categoryId}`);
+      contentDiv.innerHTML = '';
+  }
+
+  function generateStreamList(streams) {
+      return `
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              ${streams.map(stream => `
+                  <div class="bg-white shadow-md rounded-lg p-4">
+                      <div class="flex items-center mb-2">
+                          ${stream.cached_icon ?
+                              `<img src="${stream.cached_icon}" alt="${stream.name} icon" class="w-12 h-12 mr-4 object-cover rounded">` :
+                              `<div class="w-12 h-12 mr-4 bg-gray-200 rounded flex items-center justify-center">
+                                  <span class="text-gray-500">No icon</span>
+                              </div>`
+                          }
+                          <h3 class="text-lg font-semibold">${stream.name}</h3>
+                      </div>
+                      <p><strong>Stream Type:</strong> ${stream.stream_type}</p>
+                      <p><strong>Added:</strong> ${new Date(stream.added * 1000).toLocaleString()}</p>
+                      <div class="mt-2 flex space-x-2">
+                          <button onclick="copyStreamLink('${stream.stream_id}')" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded text-sm">
+                              Copy Link
+                          </button>
+                          <a href="/epg_page/${stream.stream_id}" class="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded text-sm">
+                              Load EPG
+                          </a>
+                      </div>
+                  </div>
+              `).join('')}
+          </div>
+      `;
+  }
+
+  function copyStreamLink(streamId) {
+      const stream = allStreams.find(s => s.stream_id === streamId);
+      if (stream) {
+          const link = `${window.location.origin}/live/${stream.stream_id}.ts`;
+          navigator.clipboard.writeText(link).then(() => {
+              alert('Stream link copied to clipboard!');
+          }).catch(err => {
+              console.error('Failed to copy stream link: ', err);
+          });
+      }
+  }
+</script>
+
 {% endblock %}

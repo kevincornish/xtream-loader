@@ -252,7 +252,62 @@ class CachedApiClient:
         force_refresh: bool = False,
         db: Session = None,
     ) -> Tuple[List[Dict[str, Any]], datetime, datetime]:
-        return self._get_live_categories_from_db(connection_info, force_refresh, db)
+        refresh_data = (
+            db.query(RefreshData)
+            .filter(RefreshData.data_type == "live_categories")
+            .first()
+        )
+
+        if (
+            force_refresh
+            or not refresh_data
+            or datetime.utcnow() - refresh_data.last_refresh > timedelta(hours=24)
+        ):
+            # Fetch data from API
+            url = f"{connection_info.base_url}/player_api.php?username={connection_info.username}&password={connection_info.password}&action=get_live_categories"
+            response = requests.get(url)
+            response.raise_for_status()
+            data = response.json()
+
+            # Clear existing live categories
+            db.query(LiveCategory).delete()
+
+            # Add new live categories
+            for category in data:
+                new_category = LiveCategory(
+                    category_id=category["category_id"],
+                    category_name=category["category_name"],
+                    parent_id=category["parent_id"],
+                )
+                db.add(new_category)
+
+            # Update or create RefreshData
+            if not refresh_data:
+                refresh_data = RefreshData(data_type="live_categories")
+            refresh_data.last_refresh = datetime.utcnow()
+            db.add(refresh_data)
+
+            db.commit()
+            db.refresh(refresh_data)
+
+        # Fetch live categories from database
+        live_categories = db.query(LiveCategory).all()
+
+        # Convert LiveCategory objects to dictionary
+        live_categories_list = [
+            {
+                "category_id": category.category_id,
+                "category_name": category.category_name,
+                "parent_id": category.parent_id,
+            }
+            for category in live_categories
+        ]
+
+        return (
+            live_categories_list,
+            refresh_data.last_refresh,
+            refresh_data.last_refresh + timedelta(hours=24),
+        )
 
     def _get_live_categories_from_db(
         self, connection_info: ConnectionInfo, force_refresh: bool, db: Session
@@ -312,17 +367,6 @@ class CachedApiClient:
             live_categories_list,
             refresh_data.last_refresh,
             refresh_data.last_refresh + timedelta(hours=24),
-        )
-
-    def get_live_streams_by_category(
-        self,
-        connection_info: ConnectionInfo,
-        category_id: int,
-        force_refresh: bool = False,
-        db: Session = None,
-    ) -> List[Dict[str, Any]]:
-        return self._get_live_channels_from_db(
-            connection_info, category_id, force_refresh, db
         )
 
     def _get_live_channels_from_db(
@@ -413,29 +457,142 @@ class CachedApiClient:
 
         return live_channels_list
 
-    def get_series_category(
+    def get_all_live_streams(
         self,
         connection_info: ConnectionInfo,
+        force_refresh: bool = False,
         db: Session = None,
-    ) -> Tuple[List[Dict[str, Any]], datetime, datetime]:
-        return self._get_series_categories_from_db(connection_info, db)
-
-    def _get_series_categories_from_db(
-        self, connection_info: ConnectionInfo, db: Session
     ) -> Tuple[List[Dict[str, Any]], datetime, datetime]:
         refresh_data = (
             db.query(RefreshData)
-            .filter(RefreshData.data_type == "series_categories")
+            .filter(RefreshData.data_type == "all_live_streams")
             .first()
         )
 
-        if not refresh_data:
-            # If no refresh data, create it with a past date to force a refresh
-            refresh_data = RefreshData(
-                data_type="series_categories", last_refresh=datetime.min
-            )
-            db.add(refresh_data)
-            db.commit()
+        if (
+            force_refresh
+            or not refresh_data
+            or datetime.utcnow() - refresh_data.last_refresh > timedelta(hours=24)
+        ):
+            url = f"{connection_info.base_url}/player_api.php?username={connection_info.username}&password={connection_info.password}&action=get_live_streams"
+            try:
+                response = requests.get(url)
+                response.raise_for_status()
+                data = response.json()
+
+                logger.info(f"Fetched {len(data)} live streams from API")
+
+                try:
+                    # Clear existing live streams
+                    deleted_count = db.query(LiveChannel).delete()
+                    logger.info(
+                        f"Cleared {deleted_count} existing live streams from database"
+                    )
+
+                    # Add new live streams in batches
+                    new_stream_count = 0
+                    batch_size = 500
+                    for i in range(0, len(data), batch_size):
+                        batch = data[i : i + batch_size]
+                        stream_objects = []
+                        for stream in batch:
+                            new_stream = LiveChannel(
+                                num=stream["num"],
+                                name=stream["name"],
+                                stream_type=stream["stream_type"],
+                                stream_id=stream["stream_id"],
+                                stream_icon=stream["stream_icon"],
+                                epg_channel_id=stream.get("epg_channel_id", ""),
+                                added=stream["added"],
+                                category_id=stream["category_id"],
+                                custom_sid=stream.get("custom_sid", ""),
+                                tv_archive=stream.get("tv_archive", 0),
+                                direct_source=stream.get("direct_source", ""),
+                                tv_archive_duration=stream.get(
+                                    "tv_archive_duration", 0
+                                ),
+                            )
+                            stream_objects.append(new_stream)
+
+                        db.bulk_save_objects(stream_objects)
+                        db.flush()
+                        new_stream_count += len(stream_objects)
+                        logger.info(
+                            f"Added batch of {len(stream_objects)} live streams. Total: {new_stream_count}"
+                        )
+
+                    logger.info(
+                        f"Finished adding {new_stream_count} new live streams to database"
+                    )
+
+                    # Update or create RefreshData
+                    if not refresh_data:
+                        refresh_data = RefreshData(data_type="all_live_streams")
+                    refresh_data.last_refresh = datetime.utcnow()
+                    db.add(refresh_data)
+
+                    db.commit()
+                    logger.info("Successfully committed all changes to database")
+
+                except SQLAlchemyError as e:
+                    logger.error(f"Error updating database: {str(e)}")
+                    raise
+
+            except requests.RequestException as e:
+                logger.error(f"Error fetching data from API: {str(e)}")
+                raise
+
+        # Fetch all live streams from database
+        all_streams = db.query(LiveChannel).all()
+        logger.info(f"Retrieved {len(all_streams)} live streams from database")
+
+        # Convert LiveChannel objects to dictionary
+        stream_list = [
+            {
+                "num": stream.num,
+                "name": stream.name,
+                "stream_type": stream.stream_type,
+                "stream_id": stream.stream_id,
+                "stream_icon": stream.stream_icon,
+                "epg_channel_id": stream.epg_channel_id,
+                "added": stream.added,
+                "category_id": stream.category_id,
+                "custom_sid": stream.custom_sid,
+                "tv_archive": stream.tv_archive,
+                "direct_source": stream.direct_source,
+                "tv_archive_duration": stream.tv_archive_duration,
+            }
+            for stream in all_streams
+        ]
+
+        return (
+            stream_list,
+            refresh_data.last_refresh,
+            refresh_data.last_refresh + timedelta(hours=24),
+        )
+
+    def get_series_category(
+        self,
+        connection_info: ConnectionInfo,
+        force_refresh: bool = False,
+        db: Session = None,
+    ) -> Tuple[List[Dict[str, Any]], datetime, datetime]:
+        refresh_data = (
+            db.query(RefreshData)
+            .filter(RefreshData.data_type == "all_series")
+            .first()
+        )
+
+        if (
+            force_refresh
+            or not refresh_data
+            or datetime.utcnow() - refresh_data.last_refresh > timedelta(hours=24)
+        ):
+            # Trigger a refresh of all series data
+            _, fetch_time, expiry_time = self.get_all_series(connection_info, force_refresh=True, db=db)
+        else:
+            fetch_time = refresh_data.last_refresh
+            expiry_time = fetch_time + timedelta(hours=24)
 
         # Fetch series categories from database
         series_categories = db.query(SeriesCategory).all()
@@ -450,11 +607,7 @@ class CachedApiClient:
             for category in series_categories
         ]
 
-        return (
-            series_categories_list,
-            refresh_data.last_refresh,
-            refresh_data.last_refresh + timedelta(hours=24),
-        )
+        return series_categories_list, fetch_time, expiry_time
 
     def get_series_by_category(
         self,
@@ -563,6 +716,7 @@ class CachedApiClient:
         series_list = (
             db.query(Series).filter(Series.category_id == str(category_id)).all()
         )
+        logger.info(f"Fetched {len(series_list)} series from DB")
 
         # Convert Series objects to dictionary and add computed fields
         series_data = []
@@ -682,6 +836,7 @@ class CachedApiClient:
         episodes = (
             db.query(SeriesEpisode).filter(SeriesEpisode.series_id == series_id).all()
         )
+        logger.info(f"Fetched {len(episodes)} episodes from DB")
 
         # Convert to dictionary
         series_info = {
@@ -861,9 +1016,40 @@ class CachedApiClient:
     def get_film_categories(
         self,
         connection_info: ConnectionInfo,
+        force_refresh: bool = False,
         db: Session = None,
     ) -> Tuple[List[Dict[str, Any]], datetime, datetime]:
-        return self._get_film_categories_from_db(connection_info, db)
+        refresh_data = (
+            db.query(RefreshData)
+            .filter(RefreshData.data_type == "all_films")
+            .first()
+        )
+
+        if (
+            force_refresh
+            or not refresh_data
+            or datetime.utcnow() - refresh_data.last_refresh > timedelta(hours=24)
+        ):
+            # Trigger a refresh of all films data
+            _, fetch_time, expiry_time = self.get_all_films(connection_info, force_refresh=True, db=db)
+        else:
+            fetch_time = refresh_data.last_refresh
+            expiry_time = fetch_time + timedelta(hours=24)
+
+        # Fetch film categories from database
+        film_categories = db.query(FilmCategory).all()
+
+        # Convert FilmCategory objects to dictionary
+        film_categories_list = [
+            {
+                "category_id": category.category_id,
+                "category_name": category.category_name,
+                "parent_id": category.parent_id,
+            }
+            for category in film_categories
+        ]
+
+        return film_categories_list, fetch_time, expiry_time
 
     def _get_film_categories_from_db(
         self, connection_info: ConnectionInfo, db: Session
@@ -884,7 +1070,7 @@ class CachedApiClient:
 
         # Fetch film categories from database
         film_categories = db.query(FilmCategory).all()
-
+        logger.info(f"Fetched {len(film_categories)} film_categories from API")
         # Convert FilmCategory objects to dictionary
         film_categories_list = [
             {

@@ -23,6 +23,7 @@ templates = Jinja2Templates(directory="templates")
 async def series_page(
     request: Request,
     current_user: User = Depends(get_current_user),
+    force_refresh: bool = Query(False),
     db: Session = Depends(get_db),
     connection_info: ConnectionInfo = Depends(
         lambda: ConnectionInfo(
@@ -34,9 +35,10 @@ async def series_page(
 ):
     if not current_user:
         return RedirectResponse(url="/login")
-    series_categories, fetch_time, _ = client.get_series_category(
-        connection_info, db=db
+    series_categories, fetch_time, expiry_time = client.get_series_category(
+        connection_info, force_refresh, db=db
     )
+    refresh_time = calculate_refresh_time(expiry_time)
 
     return templates.TemplateResponse(
         "series.html",
@@ -44,6 +46,7 @@ async def series_page(
             "request": request,
             "series_categories": series_categories,
             "fetch_time": fetch_time.strftime("%Y-%m-%d %H:%M:%S"),
+            "refresh_time": refresh_time,
             "current_user": current_user,
         },
     )
