@@ -571,6 +571,46 @@ class CachedApiClient:
             refresh_data.last_refresh + timedelta(hours=24),
         )
 
+    def fetch_and_store_series_categories(
+        self,
+        connection_info: ConnectionInfo,
+        db: Session,
+    ) -> List[SeriesCategory]:
+        url = f"{connection_info.base_url}/player_api.php?username={connection_info.username}&password={connection_info.password}&action=get_series_categories"
+        try:
+            response = requests.get(url)
+            response.raise_for_status()
+            categories_data = response.json()
+
+            logger.info(f"Fetched {len(categories_data)} series categories from API")
+
+            # Clear existing categories
+            db.query(SeriesCategory).delete()
+
+            # Add new categories
+            categories = []
+            for category_data in categories_data:
+                new_category = SeriesCategory(
+                    category_id=category_data["category_id"],
+                    category_name=category_data["category_name"],
+                    parent_id=category_data.get("parent_id", 0),
+                )
+                db.add(new_category)
+                categories.append(new_category)
+
+            db.commit()
+            logger.info(f"Stored {len(categories)} series categories in the database")
+
+            return categories
+        except requests.RequestException as e:
+            logger.error(f"Error fetching series categories from API: {str(e)}")
+            db.rollback()
+            raise
+        except SQLAlchemyError as e:
+            logger.error(f"Error storing series categories in database: {str(e)}")
+            db.rollback()
+            raise
+
     def get_series_category(
         self,
         connection_info: ConnectionInfo,
@@ -579,7 +619,7 @@ class CachedApiClient:
     ) -> Tuple[List[Dict[str, Any]], datetime, datetime]:
         refresh_data = (
             db.query(RefreshData)
-            .filter(RefreshData.data_type == "all_series")
+            .filter(RefreshData.data_type == "series_categories")
             .first()
         )
 
@@ -588,14 +628,19 @@ class CachedApiClient:
             or not refresh_data
             or datetime.utcnow() - refresh_data.last_refresh > timedelta(hours=24)
         ):
-            # Trigger a refresh of all series data
-            _, fetch_time, expiry_time = self.get_all_series(connection_info, force_refresh=True, db=db)
-        else:
-            fetch_time = refresh_data.last_refresh
-            expiry_time = fetch_time + timedelta(hours=24)
+            categories = self.fetch_and_store_series_categories(connection_info, db)
+            fetch_time = datetime.utcnow()
 
-        # Fetch series categories from database
-        series_categories = db.query(SeriesCategory).all()
+            if not refresh_data:
+                refresh_data = RefreshData(data_type="series_categories")
+            refresh_data.last_refresh = fetch_time
+            db.add(refresh_data)
+            db.commit()
+        else:
+            categories = db.query(SeriesCategory).all()
+            fetch_time = refresh_data.last_refresh
+
+        expiry_time = fetch_time + timedelta(hours=24)
 
         # Convert SeriesCategory objects to dictionary
         series_categories_list = [
@@ -604,7 +649,7 @@ class CachedApiClient:
                 "category_name": category.category_name,
                 "parent_id": category.parent_id,
             }
-            for category in series_categories
+            for category in categories
         ]
 
         return series_categories_list, fetch_time, expiry_time
@@ -910,6 +955,9 @@ class CachedApiClient:
                 logger.info(f"Fetched {len(data)} series from API")
 
                 try:
+                    # Fetch and store categories first
+                    self.fetch_and_store_series_categories(connection_info, db)
+
                     # Clear existing series
                     deleted_count = db.query(Series).delete()
                     logger.info(
@@ -959,8 +1007,8 @@ class CachedApiClient:
                     refresh_data.last_refresh = datetime.utcnow()
                     db.add(refresh_data)
 
-                    db.flush()
-                    logger.info("Successfully flushed all changes to database")
+                    db.commit()
+                    logger.info("Successfully committed all changes to database")
 
                     # Verify the number of series in the database
                     actual_count = db.query(Series).count()
@@ -975,6 +1023,7 @@ class CachedApiClient:
 
                 except SQLAlchemyError as e:
                     logger.error(f"Error updating database: {str(e)}")
+                    db.rollback()
                     raise
 
             except requests.RequestException as e:
@@ -1021,7 +1070,7 @@ class CachedApiClient:
     ) -> Tuple[List[Dict[str, Any]], datetime, datetime]:
         refresh_data = (
             db.query(RefreshData)
-            .filter(RefreshData.data_type == "all_films")
+            .filter(RefreshData.data_type == "film_categories")
             .first()
         )
 
@@ -1030,26 +1079,81 @@ class CachedApiClient:
             or not refresh_data
             or datetime.utcnow() - refresh_data.last_refresh > timedelta(hours=24)
         ):
-            # Trigger a refresh of all films data
-            _, fetch_time, expiry_time = self.get_all_films(connection_info, force_refresh=True, db=db)
+            categories = self.fetch_and_store_film_categories(connection_info, db)
+            fetch_time = datetime.utcnow()
+
+            if not refresh_data:
+                refresh_data = RefreshData(data_type="film_categories")
+            refresh_data.last_refresh = fetch_time
+            db.add(refresh_data)
+            db.commit()
         else:
+            categories = db.query(FilmCategory).all()
             fetch_time = refresh_data.last_refresh
-            expiry_time = fetch_time + timedelta(hours=24)
 
-        # Fetch film categories from database
-        film_categories = db.query(FilmCategory).all()
+        expiry_time = fetch_time + timedelta(hours=24)
 
-        # Convert FilmCategory objects to dictionary
-        film_categories_list = [
-            {
-                "category_id": category.category_id,
-                "category_name": category.category_name,
-                "parent_id": category.parent_id,
-            }
-            for category in film_categories
-        ]
+        # Convert FilmCategory objects or dictionaries to the expected format
+        film_categories_list = []
+        for category in categories:
+            if isinstance(category, dict):
+                film_categories_list.append(
+                    {
+                        "category_id": category.get("category_id"),
+                        "category_name": category.get("category_name"),
+                        "parent_id": category.get("parent_id", 0),
+                    }
+                )
+            else:  # FilmCategory object
+                film_categories_list.append(
+                    {
+                        "category_id": category.category_id,
+                        "category_name": category.category_name,
+                        "parent_id": category.parent_id,
+                    }
+                )
 
         return film_categories_list, fetch_time, expiry_time
+
+    def fetch_and_store_film_categories(
+        self,
+        connection_info: ConnectionInfo,
+        db: Session,
+    ) -> List[FilmCategory]:
+        url = f"{connection_info.base_url}/player_api.php?username={connection_info.username}&password={connection_info.password}&action=get_vod_categories"
+        try:
+            response = requests.get(url)
+            response.raise_for_status()
+            categories_data = response.json()
+
+            logger.info(f"Fetched {len(categories_data)} film categories from API")
+
+            # Clear existing categories
+            db.query(FilmCategory).delete()
+
+            # Add new categories
+            categories = []
+            for category_data in categories_data:
+                new_category = FilmCategory(
+                    category_id=category_data["category_id"],
+                    category_name=category_data["category_name"],
+                    parent_id=category_data.get("parent_id", 0),
+                )
+                db.add(new_category)
+                categories.append(new_category)
+
+            db.commit()
+            logger.info(f"Stored {len(categories)} film categories in the database")
+
+            return categories
+        except requests.RequestException as e:
+            logger.error(f"Error fetching film categories from API: {str(e)}")
+            db.rollback()
+            raise
+        except SQLAlchemyError as e:
+            logger.error(f"Error storing film categories in database: {str(e)}")
+            db.rollback()
+            raise
 
     def _get_film_categories_from_db(
         self, connection_info: ConnectionInfo, db: Session

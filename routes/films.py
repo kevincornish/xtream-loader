@@ -1,7 +1,7 @@
 from datetime import datetime
 import os
 import logging
-from fastapi import APIRouter, Depends, Query, Request, BackgroundTasks
+from fastapi import APIRouter, Depends, Query, Request, BackgroundTasks, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -36,21 +36,27 @@ async def film_page(
 ):
     if not current_user:
         return RedirectResponse(url="/login")
-    film_categories, fetch_time, expiry_time = client.get_film_categories(
-        connection_info, force_refresh, db=db
-    )
-    refresh_time = calculate_refresh_time(expiry_time)
+    try:
+        film_categories, fetch_time, expiry_time = client.get_film_categories(
+            connection_info, force_refresh, db=db
+        )
+        refresh_time = calculate_refresh_time(expiry_time)
 
-    return templates.TemplateResponse(
-        "films.html",
-        {
-            "request": request,
-            "film_categories": film_categories,
-            "fetch_time": fetch_time.strftime("%Y-%m-%d %H:%M:%S"),
-            "refresh_time": refresh_time,
-            "current_user": current_user,
-        },
-    )
+        return templates.TemplateResponse(
+            "films.html",
+            {
+                "request": request,
+                "film_categories": film_categories,
+                "fetch_time": fetch_time.strftime("%Y-%m-%d %H:%M:%S"),
+                "refresh_time": refresh_time,
+                "current_user": current_user,
+            },
+        )
+    except Exception as e:
+        logger.error(f"Error in film_page: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail="An error occurred while processing the request"
+        )
 
 
 @router.get("/films/refresh-all", response_class=HTMLResponse)
