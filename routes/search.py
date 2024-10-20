@@ -14,20 +14,22 @@ templates = Jinja2Templates(directory="templates")
 async def search(
     request: Request,
     q: str = Query(..., min_length=1, max_length=100),
-    search_type: str = Query(..., regex="^(series|movies|tv)$"),
+    search_type: str = Query(..., regex="^(series|films|tv)$"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     if not current_user:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
-    if search_type == "series":
+    results = []
+
+    if search_type == "series" and current_user.series_access:
         results = (
             db.query(Series)
             .filter(or_(Series.name.ilike(f"%{q}%"), Series.plot.ilike(f"%{q}%")))
             .all()
         )
-    elif search_type == "movies":
+    elif search_type == "films" and current_user.films_access:
         results = (
             db.query(FilmStream)
             .filter(
@@ -38,7 +40,7 @@ async def search(
             )
             .all()
         )
-    else:  # TV channels
+    elif search_type == "tv" and current_user.streams_access:
         results = (
             db.query(LiveChannel)
             .filter(
@@ -49,6 +51,8 @@ async def search(
             )
             .all()
         )
+    else:
+        raise HTTPException(status_code=403, detail="Access denied")
 
     return templates.TemplateResponse(
         "search.html",

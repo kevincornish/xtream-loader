@@ -3,6 +3,10 @@ endblock %} {% block content %}
 <div class="container mx-auto px-4 py-8">
   <h1 class="text-3xl font-bold mb-6">Search Results for "{{ query }}"</h1>
 
+  {% if not current_user.series_access and not current_user.films_access and not
+  current_user.streams_access %}
+  <p class="text-red-500">You don't have access to any content.</p>
+  {% else %}
   <p class="mb-4">Showing results for: <strong>{{ search_type }}</strong></p>
 
   {% if results %}
@@ -11,25 +15,25 @@ endblock %} {% block content %}
     <div class="bg-white shadow-md rounded-lg p-4">
       <h2 class="text-xl font-semibold mb-2">{{ item.name }}</h2>
       {% if search_type == 'series' %}
-      <p><strong>Plot:</strong> {{ item.plot[:100] }}...</p>
+      <p class="mb-2"><strong>Plot:</strong> {{ item.plot[:100] }}...</p>
       <a
         href="/series/{{ item.series_id }}"
         class="text-blue-500 hover:underline"
         >View Series</a
       >
-      {% elif search_type == 'movies' %}
-      <p><strong>Stream Type:</strong> {{ item.stream_type }}</p>
+      {% elif search_type == 'films' %}
+      <p class="mb-2"><strong>Stream Type:</strong> {{ item.stream_type }}</p>
       <a href="/film/{{ item.stream_id }}" class="text-blue-500 hover:underline"
         >View Movie</a
       >
       {% else %}
-      <p><strong>Stream Type:</strong> {{ item.stream_type }}</p>
+      <p class="mb-2"><strong>Stream Type:</strong> {{ item.stream_type }}</p>
       {% endif %}
     </div>
     {% endfor %}
   </div>
   {% else %}
-  <p class="text-lg">No results found for your search.</p>
-  {% endif %}
+  <p>No results found for your search.</p>
+  {% endif %} {% endif %}
 </div>
 {% endblock %}
