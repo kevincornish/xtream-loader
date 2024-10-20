@@ -1,12 +1,22 @@
 import hashlib
 import os
-from typing import List, Optional, Union
+from typing import Any, List, Optional, Union, Dict
 from datetime import datetime
-
 import requests
-
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 
 ICONS_DIR = "static/icons"
+
+
+async def cache_icons_background(series_list: List[Dict[str, Any]]):
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        loop = asyncio.get_event_loop()
+        tasks = [
+            loop.run_in_executor(executor, cache_icon, series["cover"])
+            for series in series_list
+        ]
+        await asyncio.gather(*tasks)
 
 
 def cache_icon(icon_url: str) -> str:

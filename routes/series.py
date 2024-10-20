@@ -1,14 +1,19 @@
+from datetime import datetime
 import os
-from fastapi import APIRouter, Depends, Query, Request
+import logging
+from fastapi import APIRouter, Depends, Query, Request, BackgroundTasks
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from database import User, get_db
 from api_client import client, ConnectionInfo
-from utils import calculate_refresh_time, cache_backdrop
+from utils import calculate_refresh_time, cache_backdrop, cache_icons_background
 from auth import get_current_user
 from urllib.parse import quote
 from config import API_BASE_URL, API_PASSWORD, API_USERNAME
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -43,34 +48,69 @@ async def series_page(
             "fetch_time": fetch_time.strftime("%Y-%m-%d %H:%M:%S"),
             "refresh_time": refresh_time,
             "current_user": current_user,
+            "all_series_refreshed": False,
         },
     )
 
 
-@router.get("/series-category/{category_id}")
-async def get_series_category_shows(
-    category_id: int,
+@router.get("/series/refresh-all", response_class=HTMLResponse)
+async def refresh_all_series(
     request: Request,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
-    force_refresh: bool = False,
     db: Session = Depends(get_db),
     connection_info: ConnectionInfo = Depends(
         lambda: ConnectionInfo(
-            base_url=os.getenv("API_BASE_URL"),
-            username=os.getenv("API_USERNAME"),
-            password=os.getenv("API_PASSWORD"),
+            base_url=API_BASE_URL,
+            username=API_USERNAME,
+            password=API_PASSWORD,
         )
     ),
 ):
     if not current_user:
         return RedirectResponse(url="/login")
-    series = client.get_series_by_category(
-        connection_info, category_id, force_refresh, db
-    )
-    return templates.TemplateResponse(
-        "series_list.html",
-        {"request": request, "series": series, "current_user": current_user},
-    )
+
+    try:
+        all_series, fetch_time, expiry_time = client.get_all_series(
+            connection_info, force_refresh=True, db=db
+        )
+        refresh_time = calculate_refresh_time(expiry_time)
+
+        background_tasks.add_task(cache_icons_background, all_series)
+
+        series_categories, _, _ = client.get_series_category(
+            connection_info, force_refresh=False, db=db
+        )
+
+        db.commit()  # Commit the transaction here
+
+        return templates.TemplateResponse(
+            "series.html",
+            {
+                "request": request,
+                "series_categories": series_categories,
+                "fetch_time": fetch_time.strftime("%Y-%m-%d %H:%M:%S"),
+                "refresh_time": refresh_time,
+                "current_user": current_user,
+                "all_series_refreshed": True,
+            },
+        )
+    except Exception as e:
+        db.rollback()  # Rollback the transaction in case of any exception
+        logger.error(f"Error refreshing all series: {str(e)}")
+        return templates.TemplateResponse(
+            "series.html",
+            {
+                "request": request,
+                "series_categories": [],
+                "fetch_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "refresh_time": "N/A",
+                "current_user": current_user,
+                "all_series_refreshed": False,
+                "error_message": "An error occurred while refreshing series data.",
+            },
+            status_code=500,
+        )
 
 
 @router.get("/series/{series_id}", response_class=HTMLResponse)
@@ -82,9 +122,9 @@ async def get_series_episodes(
     db: Session = Depends(get_db),
     connection_info: ConnectionInfo = Depends(
         lambda: ConnectionInfo(
-            base_url=os.getenv("API_BASE_URL"),
-            username=os.getenv("API_USERNAME"),
-            password=os.getenv("API_PASSWORD"),
+            base_url=API_BASE_URL,
+            username=API_USERNAME,
+            password=API_PASSWORD,
         )
     ),
 ):
@@ -116,4 +156,30 @@ async def get_series_episodes(
             "refresh_time": refresh_time,
             "current_user": current_user,
         },
+    )
+
+
+@router.get("/series-category/{category_id}")
+async def get_series_category_shows(
+    category_id: int,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    force_refresh: bool = False,
+    db: Session = Depends(get_db),
+    connection_info: ConnectionInfo = Depends(
+        lambda: ConnectionInfo(
+            base_url=os.getenv("API_BASE_URL"),
+            username=os.getenv("API_USERNAME"),
+            password=os.getenv("API_PASSWORD"),
+        )
+    ),
+):
+    if not current_user:
+        return RedirectResponse(url="/login")
+    series = client.get_series_by_category(
+        connection_info, category_id, force_refresh, db
+    )
+    return templates.TemplateResponse(
+        "series_list.html",
+        {"request": request, "series": series, "current_user": current_user},
     )

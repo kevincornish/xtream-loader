@@ -5,6 +5,7 @@ import logging
 import requests
 from fastapi import HTTPException, Depends
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import SQLAlchemyError
 from database import (
     FilmCategory,
     LiveChannel,
@@ -487,7 +488,41 @@ class CachedApiClient:
         force_refresh: bool = False,
         db: Session = None,
     ) -> List[Dict[str, Any]]:
+        # Check if we have series for this category in the database
+        existing_series = db.query(Series).filter(Series.category_id == str(category_id)).all()
+        
+        if existing_series and not force_refresh:
+            logger.info(f"Retrieved {len(existing_series)} series for category {category_id} from database")
+            return self._convert_series_to_dict(existing_series)
+        
+        # If no existing series or force refresh, fetch from API
         return self._get_series_from_db(connection_info, category_id, force_refresh, db)
+
+    def _convert_series_to_dict(self, series_list):
+        return [
+            {
+                "num": 1,  # This field is not in the database, so we're setting a default value
+                "name": series.name,
+                "series_id": series.series_id,
+                "cover": series.cover,
+                "plot": series.plot,
+                "cast": series.cast,
+                "director": series.director,
+                "genre": series.genre,
+                "releaseDate": series.release_date,
+                "last_modified": series.last_modified,
+                "rating": series.rating,
+                "rating_5based": series.rating_5based,
+                "backdrop_path": series.backdrop_path,
+                "youtube_trailer": series.youtube_trailer,
+                "episode_run_time": series.episode_run_time,
+                "category_id": series.category_id,
+                "added_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "cached_cover": cache_icon(series.cover),
+                "release_date": series.release_date,
+            }
+            for series in series_list
+        ]
 
     def _get_series_from_db(
         self,
@@ -713,6 +748,133 @@ class CachedApiClient:
 
         return (
             series_info,
+            refresh_data.last_refresh,
+            refresh_data.last_refresh + timedelta(hours=24),
+        )
+
+    def get_all_series(
+        self,
+        connection_info: ConnectionInfo,
+        force_refresh: bool = False,
+        db: Session = None,
+    ) -> Tuple[List[Dict[str, Any]], datetime, datetime]:
+        refresh_data = (
+            db.query(RefreshData).filter(RefreshData.data_type == "all_series").first()
+        )
+
+        if (
+            force_refresh
+            or not refresh_data
+            or datetime.utcnow() - refresh_data.last_refresh > timedelta(hours=24)
+        ):
+            url = f"{connection_info.base_url}/player_api.php?username={connection_info.username}&password={connection_info.password}&action=get_series"
+            try:
+                response = requests.get(url)
+                response.raise_for_status()
+                data = response.json()
+
+                logger.info(f"Fetched {len(data)} series from API")
+
+                try:
+                    # Clear existing series
+                    deleted_count = db.query(Series).delete()
+                    logger.info(
+                        f"Cleared {deleted_count} existing series from database"
+                    )
+
+                    # Add new series in batches
+                    new_series_count = 0
+                    batch_size = 500
+                    for i in range(0, len(data), batch_size):
+                        batch = data[i : i + batch_size]
+                        series_objects = []
+                        for series in batch:
+                            new_series = Series(
+                                series_id=series["series_id"],
+                                category_id=series["category_id"],
+                                name=series["name"],
+                                cover=series["cover"],
+                                plot=series.get("plot", ""),
+                                cast=series.get("cast", ""),
+                                director=series.get("director", ""),
+                                genre=series.get("genre", ""),
+                                release_date=series.get("releaseDate", ""),
+                                last_modified=series.get("last_modified", ""),
+                                rating=series.get("rating", ""),
+                                rating_5based=series.get("rating_5based", 0.0),
+                                backdrop_path=series.get("backdrop_path", []),
+                                youtube_trailer=series.get("youtube_trailer", ""),
+                                episode_run_time=series.get("episode_run_time", ""),
+                            )
+                            series_objects.append(new_series)
+
+                        db.bulk_save_objects(series_objects)
+                        db.flush()
+                        new_series_count += len(series_objects)
+                        logger.info(
+                            f"Added batch of {len(series_objects)} series. Total: {new_series_count}"
+                        )
+
+                    logger.info(
+                        f"Finished adding {new_series_count} new series to database"
+                    )
+
+                    # Update or create RefreshData
+                    if not refresh_data:
+                        refresh_data = RefreshData(data_type="all_series")
+                    refresh_data.last_refresh = datetime.utcnow()
+                    db.add(refresh_data)
+
+                    db.flush()
+                    logger.info("Successfully flushed all changes to database")
+
+                    # Verify the number of series in the database
+                    actual_count = db.query(Series).count()
+                    logger.info(
+                        f"Actual number of series in database after refresh: {actual_count}"
+                    )
+
+                    if actual_count != new_series_count:
+                        logger.warning(
+                            f"Discrepancy in series count. Expected: {new_series_count}, Actual: {actual_count}"
+                        )
+
+                except SQLAlchemyError as e:
+                    logger.error(f"Error updating database: {str(e)}")
+                    raise
+
+            except requests.RequestException as e:
+                logger.error(f"Error fetching data from API: {str(e)}")
+                raise
+
+        # Fetch all series from database
+        all_series = db.query(Series).all()
+        logger.info(f"Retrieved {len(all_series)} series from database")
+
+        # Convert Series objects to dictionary
+        series_list = [
+            {
+                "series_id": series.series_id,
+                "category_id": series.category_id,
+                "name": series.name,
+                "cover": series.cover,
+                "plot": series.plot,
+                "cast": series.cast,
+                "director": series.director,
+                "genre": series.genre,
+                "releaseDate": series.release_date,
+                "last_modified": series.last_modified,
+                "rating": series.rating,
+                "rating_5based": series.rating_5based,
+                "backdrop_path": series.backdrop_path,
+                "youtube_trailer": series.youtube_trailer,
+                "episode_run_time": series.episode_run_time,
+            }
+            for series in all_series
+        ]
+
+        return (
+            series_list,
             refresh_data.last_refresh,
             refresh_data.last_refresh + timedelta(hours=24),
         )
