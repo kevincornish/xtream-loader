@@ -26,7 +26,7 @@ from database import (
     User,
     get_db,
 )
-from routes import live_streams, series, films, epg, search
+from routes import live_streams, series, films, epg, search, statistics
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -43,6 +43,7 @@ app.include_router(series.router)
 app.include_router(films.router)
 app.include_router(epg.router)
 app.include_router(search.router)
+app.include_router(statistics.router)
 
 # Ensure the icons directory exists
 ICONS_DIR = "static/icons"
