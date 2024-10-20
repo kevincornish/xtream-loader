@@ -1,5 +1,7 @@
+from datetime import datetime
 import os
-from fastapi import APIRouter, Depends, Query, Request
+import logging
+from fastapi import APIRouter, Depends, Query, Request, BackgroundTasks
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -9,6 +11,10 @@ from utils import calculate_refresh_time, cache_backdrop
 from auth import get_current_user
 from urllib.parse import quote
 from config import API_BASE_URL, API_PASSWORD, API_USERNAME
+from utils import cache_icons_background
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -45,6 +51,67 @@ async def film_page(
             "current_user": current_user,
         },
     )
+
+
+@router.get("/films/refresh-all", response_class=HTMLResponse)
+async def refresh_all_films(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    connection_info: ConnectionInfo = Depends(
+        lambda: ConnectionInfo(
+            base_url=API_BASE_URL,
+            username=API_USERNAME,
+            password=API_PASSWORD,
+        )
+    ),
+):
+    if not current_user:
+        return RedirectResponse(url="/login")
+
+    try:
+        all_films, fetch_time, expiry_time = client.get_all_films(
+            connection_info, force_refresh=True, db=db
+        )
+        refresh_time = calculate_refresh_time(expiry_time)
+
+        # pass the films data type
+        background_tasks.add_task(cache_icons_background, all_films, "films")
+
+        film_categories, _, _ = client.get_film_categories(
+            connection_info, force_refresh=False, db=db
+        )
+
+        db.commit()
+
+        return templates.TemplateResponse(
+            "films.html",
+            {
+                "request": request,
+                "film_categories": film_categories,
+                "fetch_time": fetch_time.strftime("%Y-%m-%d %H:%M:%S"),
+                "refresh_time": refresh_time,
+                "current_user": current_user,
+                "all_films_refreshed": True,
+            },
+        )
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error refreshing all films: {str(e)}")
+        return templates.TemplateResponse(
+            "films.html",
+            {
+                "request": request,
+                "film_categories": [],
+                "fetch_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "refresh_time": "N/A",
+                "current_user": current_user,
+                "all_films_refreshed": False,
+                "error_message": "An error occurred while refreshing film data.",
+            },
+            status_code=500,
+        )
 
 
 @router.get("/film-category/{category_id}")

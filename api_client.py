@@ -489,12 +489,16 @@ class CachedApiClient:
         db: Session = None,
     ) -> List[Dict[str, Any]]:
         # Check if we have series for this category in the database
-        existing_series = db.query(Series).filter(Series.category_id == str(category_id)).all()
-        
+        existing_series = (
+            db.query(Series).filter(Series.category_id == str(category_id)).all()
+        )
+
         if existing_series and not force_refresh:
-            logger.info(f"Retrieved {len(existing_series)} series for category {category_id} from database")
+            logger.info(
+                f"Retrieved {len(existing_series)} series for category {category_id} from database"
+            )
             return self._convert_series_to_dict(existing_series)
-        
+
         # If no existing series or force refresh, fetch from API
         return self._get_series_from_db(connection_info, category_id, force_refresh, db)
 
@@ -1045,6 +1049,114 @@ class CachedApiClient:
             film_streams_list.append(stream_dict)
 
         return film_streams_list
+
+    def get_all_films(
+        self,
+        connection_info: ConnectionInfo,
+        force_refresh: bool = False,
+        db: Session = None,
+    ) -> Tuple[List[Dict[str, Any]], datetime, datetime]:
+        refresh_data = (
+            db.query(RefreshData).filter(RefreshData.data_type == "all_films").first()
+        )
+
+        if (
+            force_refresh
+            or not refresh_data
+            or datetime.utcnow() - refresh_data.last_refresh > timedelta(hours=24)
+        ):
+            url = f"{connection_info.base_url}/player_api.php?username={connection_info.username}&password={connection_info.password}&action=get_vod_streams"
+            try:
+                response = requests.get(url)
+                response.raise_for_status()
+                data = response.json()
+
+                logger.info(f"Fetched {len(data)} films from API")
+
+                try:
+                    # Clear existing films
+                    deleted_count = db.query(FilmStream).delete()
+                    logger.info(f"Cleared {deleted_count} existing films from database")
+
+                    # Add new films in batches
+                    new_film_count = 0
+                    batch_size = 500
+                    for i in range(0, len(data), batch_size):
+                        batch = data[i : i + batch_size]
+                        film_objects = []
+                        for film in batch:
+                            new_film = FilmStream(
+                                num=film["num"],
+                                name=film["name"],
+                                stream_type=film["stream_type"],
+                                stream_id=film["stream_id"],
+                                stream_icon=film["stream_icon"],
+                                rating=film["rating"],
+                                rating_5based=film["rating_5based"],
+                                added=film["added"],
+                                category_id=film["category_id"],
+                                container_extension=film["container_extension"],
+                                custom_sid=film.get("custom_sid", ""),
+                                direct_source=film.get("direct_source", ""),
+                            )
+                            film_objects.append(new_film)
+
+                        db.bulk_save_objects(film_objects)
+                        db.flush()
+                        new_film_count += len(film_objects)
+                        logger.info(
+                            f"Added batch of {len(film_objects)} films. Total: {new_film_count}"
+                        )
+
+                    logger.info(
+                        f"Finished adding {new_film_count} new films to database"
+                    )
+
+                    # Update or create RefreshData
+                    if not refresh_data:
+                        refresh_data = RefreshData(data_type="all_films")
+                    refresh_data.last_refresh = datetime.utcnow()
+                    db.add(refresh_data)
+
+                    db.commit()
+                    logger.info("Successfully committed all changes to database")
+
+                except SQLAlchemyError as e:
+                    logger.error(f"Error updating database: {str(e)}")
+                    raise
+
+            except requests.RequestException as e:
+                logger.error(f"Error fetching data from API: {str(e)}")
+                raise
+
+        # Fetch all films from database
+        all_films = db.query(FilmStream).all()
+        logger.info(f"Retrieved {len(all_films)} films from database")
+
+        # Convert FilmStream objects to dictionary
+        film_list = [
+            {
+                "num": film.num,
+                "name": film.name,
+                "stream_type": film.stream_type,
+                "stream_id": film.stream_id,
+                "stream_icon": film.stream_icon,
+                "rating": film.rating,
+                "rating_5based": film.rating_5based,
+                "added": film.added,
+                "category_id": film.category_id,
+                "container_extension": film.container_extension,
+                "custom_sid": film.custom_sid,
+                "direct_source": film.direct_source,
+            }
+            for film in all_films
+        ]
+
+        return (
+            film_list,
+            refresh_data.last_refresh,
+            refresh_data.last_refresh + timedelta(hours=24),
+        )
 
     def get_film_details(
         self,

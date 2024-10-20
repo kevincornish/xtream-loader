@@ -18,7 +18,30 @@
   >
     Force Refresh
   </a>
+  <a
+    href="/films/refresh-all"
+    class="inline-block bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded ml-2"
+  >
+    Force Refresh All Films
+  </a>
 </div>
+
+{% if all_films_refreshed %}
+<div
+  class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-8"
+  role="alert"
+>
+  All film data has been refreshed. Icon caching is in progress and may take
+  some time to complete.
+</div>
+{% endif %} {% if error_message %}
+<div
+  class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-8"
+  role="alert"
+>
+  {{ error_message }}
+</div>
+{% endif %}
 
 <div id="film-categories" class="space-y-4 mt-4">
   {% for category in film_categories %}

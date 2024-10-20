@@ -1,5 +1,6 @@
 import hashlib
 import os
+from random import randint
 from typing import Any, List, Optional, Union, Dict
 from datetime import datetime
 import requests
@@ -9,12 +10,19 @@ from concurrent.futures import ThreadPoolExecutor
 ICONS_DIR = "static/icons"
 
 
-async def cache_icons_background(series_list: List[Dict[str, Any]]):
+async def cache_icons_background(
+    data_list: List[Dict[str, Any]], data_type: str = "series"
+):
     with ThreadPoolExecutor(max_workers=10) as executor:
         loop = asyncio.get_event_loop()
         tasks = [
-            loop.run_in_executor(executor, cache_icon, series["cover"])
-            for series in series_list
+            loop.run_in_executor(
+                executor,
+                cache_icon,
+                item.get("cover" if data_type == "series" else "stream_icon"),
+            )
+            for item in data_list
+            if item.get("cover" if data_type == "series" else "stream_icon")
         ]
         await asyncio.gather(*tasks)
 
@@ -32,6 +40,9 @@ def cache_icon(icon_url: str) -> str:
             with open(filepath, "wb") as f:
                 f.write(response.content)
             print(f"Downloaded icon: {icon_url}")
+            asyncio.sleep(
+                randint(3, 100)
+            )  # adding a random sleep here so we don't get banned / limited by poster website
         except requests.RequestException as e:
             print(f"Error downloading icon {icon_url}: {e}")
             return None
